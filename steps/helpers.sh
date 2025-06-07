@@ -283,6 +283,14 @@ download_source_line() {
     fname="${fname:-$(basename "${upstream_url}")}"
     if ! [ -e "${fname}" ]; then
         for mirror in $(randomize "${MIRRORS}"); do
+            if [ "$QEMU" = True ] ; then
+                case $mirror in
+                    'http://127.0.0.1:'*)
+                        mirror="${mirror#'http://127.0.0.1:'}"
+                        mirror="http://10.0.2.2:${mirror}"
+                        ;;
+                esac
+            fi
             mirror_url="${mirror}/${fname}"
             echo "${mirror_url}"
             curl --fail --retry 3 --location "${mirror_url}" --output "${fname}" || true && break

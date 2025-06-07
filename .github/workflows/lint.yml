@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-name: Linters
+name: Lint
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
 
 jobs:
   pylint:
-    name: Lint Python files
+    name: .py files
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -24,7 +24,7 @@ jobs:
         run: pylint rootfs.py source_manifest.py lib/*.py --disable=duplicate-code
 
   shellcheck:
-    name: Lint shell files
+    name: .sh files
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -33,7 +33,7 @@ jobs:
         run: shellcheck steps/helpers.sh download-distfiles.sh mirror.sh
 
   reuse:
-    name: Lint reuse information
+    name: reuse information
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo

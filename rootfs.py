@@ -35,6 +35,7 @@ def create_configuration_file(args):
         config.write(f"ARCH_DIR={stage0_arch_map.get(args.arch, args.arch)}\n")
         config.write(f"FORCE_TIMESTAMPS={args.force_timestamps}\n")
         config.write(f"CHROOT={args.chroot or args.bwrap}\n")
+        config.write(f"QEMU={args.qemu}\n")
         config.write(f"UPDATE_CHECKSUMS={args.update_checksums}\n")
         config.write(f"JOBS={args.cores}\n")
         config.write(f"SWAP_SIZE={args.swap}\n")

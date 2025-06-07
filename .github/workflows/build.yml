@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-name: Run under bubblewrap
+name: Build
 
 on:
   workflow_dispatch:
@@ -12,8 +12,37 @@ on:
       - master
 
 jobs:
+  warmup:
+    name: Warm-up cache
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Query cache for sources
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            mirror
+            mirror-state
+          key: cache-${{ hashFiles('steps/*/sources') }}
+          restore-keys: |
+            cache-
+      - name: Get sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: mkdir -p mirror mirror-state && ./mirror.sh mirror mirror-state
+      - name: Cache sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            mirror
+            mirror-state
+          key: cache-${{ hashFiles('steps/*/sources') }}
+
   pass1:
-    name: Run up to Linux build under bubblewrap
+    name: Run up to Linux build under wrapper
+    needs: warmup
     runs-on: ubuntu-24.04
     steps:
       - name: Install bubblewrap
@@ -65,7 +94,7 @@ jobs:
           path: pass1_image.tar
 
   pass2:
-    name: Run up to Python bootstrap under bubblewrap
+    name: Run up to Python under wrapper
     needs: pass1
     runs-on: ubuntu-24.04
     steps:
@@ -114,7 +143,7 @@ jobs:
           path: pass2_image.tar
 
   pass3:
-    name: Run remaining builds under bubblewrap
+    name: Run remaining builds under wrapper
     needs: pass2
     runs-on: ubuntu-24.04
     steps:
@@ -154,3 +183,49 @@ jobs:
         with:
           name: packages
           path: target/external/repo/**
+
+  emulated:
+    name: Run under qemu
+    needs: warmup
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # There is a strange bug(?) in nongnu, when you clone a git repository
+          # against a commit != HEAD with depth=1, it errors out.
+          fetch-depth: 0
+      - name: Install qemu-system-x86
+        run: sudo apt update && sudo apt install qemu-system-x86
+      # https://github.blog/changelog/2023-02-23-hardware-accelerated-android-virtualization-on-actions-windows-and-linux-larger-hosted-runners/
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Query cache for sources
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            mirror
+            mirror-state
+          key: cache-${{ hashFiles('steps/*/sources') }}
+          restore-keys: |
+            cache-
+      - name: Get sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: mkdir -p mirror mirror-state && ./mirror.sh mirror mirror-state
+      - name: Cache sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            mirror
+            mirror-state
+          key: cache-${{ hashFiles('steps/*/sources') }}
+      - name: Copy distfiles
+        run: ./download-distfiles.sh file:///${PWD}/mirror
+      - name: Run bootstrap
+        run: ./rootfs.py -a x86 -q --build-kernels -m file://${PWD}/mirror
