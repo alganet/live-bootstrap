@@ -333,6 +333,7 @@ print(shutil.which('chroot'))
                 ]
             arg_list += [
                 '-machine', 'kernel-irqchip=split',
+                '-device', 'virtio-rng-pci',
                 '-nic', 'user,ipv6=off,model=e1000'
             ]
         if not args.interactive:

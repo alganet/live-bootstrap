@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    name: Run under bubblewrap
+    name: Run under qemu
     runs-on: ubuntu-22.04
     steps:
       - name: Install qemu
@@ -47,7 +47,13 @@ jobs:
             mirror-state
           key: cache-${{ hashFiles('steps/*/sources') }}
       - name: Run bootstrap
-        run: sudo ./rootfs.py --qemu --update-checksums --external-sources --cores 2 --mirror file://${PWD}/mirror; cat output
+        run: timeout 5h sudo ./rootfs.py --qemu --update-checksums --external-sources --cores 2 --mirror file://${PWD}/mirror
+      - name: Archive qemu output
+        if: always() # archive both failed and successful builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-output
+          path: output
       - name: Remount package disk
         if: always()
         run: >
