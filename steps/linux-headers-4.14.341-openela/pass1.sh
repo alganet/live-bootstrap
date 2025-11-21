@@ -13,6 +13,7 @@ src_prepare() {
         include/uapi/linux/hw_breakpoint.h \
         include/uapi/linux/eventpoll.h \
         include/uapi/linux/atmdev.h \
+        include/uapi/linux/ptrace.h \
         include/uapi/asm-generic/fcntl.h \
         arch/x86/include/uapi/asm/mman.h \
         arch/x86/include/uapi/asm/auxvec.h

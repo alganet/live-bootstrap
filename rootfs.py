@@ -17,6 +17,7 @@ you can run bootstap inside chroot.
 import argparse
 import os
 import signal
+import sys
 import threading
 
 from lib.generator import Generator, stage0_arch_map
@@ -332,10 +333,11 @@ print(shutil.which('chroot'))
                 ]
             arg_list += [
                 '-machine', 'kernel-irqchip=split',
+                '-device', 'virtio-rng-pci',
                 '-nic', 'user,ipv6=off,model=e1000'
             ]
         if not args.interactive:
-            arg_list += ['-no-reboot', '-nographic']
+            arg_list += ['-no-reboot', '-nographic', '-serial', 'file:output']
         run(args.qemu_cmd, *arg_list, cleanup=cleanup)
 
 if __name__ == "__main__":
