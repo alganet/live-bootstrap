@@ -19,23 +19,34 @@ jobs:
       - name: Install qemu
         run: sudo apt-get install qemu-system-x86
       - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          # There is a strange bug(?) in nongnu, when you clone a git repository
-          # against a commit != HEAD with depth=1, it errors out.
-          fetch-depth: 0
+        run: |
+          git clone "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" repo
+          sed -i 's|https://git.savannah.nongnu.org/git/mescc-tools.git|https://github.com/oriansj/mescc-tools.git|' **/.gitmodules
+          cd repo
+      - name: mescc-tools is 
+        working-directory: repo
+        run: |
+          git config --global url."https://github.com/oriansj/mescc-tools.git".insteadOf "https://git.savannah.nongnu.org/git/mescc-tools.git"
+          git config --global url."https://github.com/oriansj/mescc-tools.git".insteadOf "git://git.savannah.nongnu.org/mescc-tools.git"
+          git config --global url."https://github.com/oriansj/mescc-tools.git".insteadOf "git.savannah.nongnu.org/git/mescc-tools.git"
+          git config --global url."https://github.com/oriansj/mescc-tools.git".insteadOf "git.savannah.nongnu.org/mescc-tools.git"
+          git submodule sync
+          git submodule update --init
+          find . -name .gitmodules -print -exec sed -i 's|https://git.savannah.nongnu.org/git/mescc-tools.git|https://github.com/oriansj/mescc-tools.git|g' {} \;
+          git submodule sync --recursive
+          git submodule update --init --recursive
       - name: Query cache for sources
         id: cache
         uses: actions/cache/restore@v4
         with:
           path: |
-            mirror
-            mirror-state
+            repo/mirror
+            repo/mirror-state
           key: cache-${{ hashFiles('steps/*/sources') }}
           restore-keys: |
             cache-
       - name: Get sources
+        working-directory: repo
         if: steps.cache.outputs.cache-hit != 'true'
         run: mkdir -p mirror mirror-state && ./mirror.sh mirror mirror-state
       - name: Cache sources
@@ -43,10 +54,11 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            mirror
-            mirror-state
+            repo/mirror
+            repo/mirror-state
           key: cache-${{ hashFiles('steps/*/sources') }}
       - name: Run bootstrap
+        working-directory: repo
         run: timeout 5h sudo ./rootfs.py --qemu --update-checksums --external-sources --cores 2 --mirror file://${PWD}/mirror
       - name: Archive qemu output
         if: always() # archive both failed and successful builds
